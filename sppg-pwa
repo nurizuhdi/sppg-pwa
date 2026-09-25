@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="SPPG - Inventory & Stock Opname">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>SPPG</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;background:#0f172a;font-family:Arial,sans-serif}
+    #app{width:100%;height:100%;border:0;display:block}
+    #loading{position:fixed;inset:0;display:grid;place-items:center;color:white;background:#0f172a;z-index:2}
+    .box{text-align:center;padding:24px}.spin{font-size:32px;margin-bottom:12px}
+    .error{max-width:620px;margin:auto;line-height:1.5}
+    button{padding:10px 16px;border:0;border-radius:8px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div id="loading"><div class="box">
+    <div class="spin">⏳</div>
+    <div>Memuat SPPG...</div>
+  </div></div>
+
+  <iframe id="app" title="SPPG" allow="camera; microphone; geolocation"></iframe>
+
+  <script src="config.js"></script>
+  <script>
+    const loading = document.getElementById("loading");
+    const frame = document.getElementById("app");
+
+    if (!APP_URL || APP_URL.includes("PASTE_URL")) {
+      loading.innerHTML = '<div class="box error"><h2>Konfigurasi belum diisi</h2>' +
+        '<p>Buka file <b>config.js</b>, lalu isi <b>APP_URL</b> dengan URL Web App Google Apps Script Anda yang berakhiran <b>/exec</b>.</p></div>';
+    } else {
+      // Teruskan parameter URL (mis. ?lisensi=KODE dari tautan aktivasi operator)
+      // ke Apps Script di dalam iframe, supaya tautan yang dibagikan lewat domain
+      // sendiri (mis. toolkiit.id/?lisensi=KODE) tetap berfungsi otomatis.
+      frame.src = APP_URL + (window.location.search || "");
+      frame.addEventListener("load", () => loading.style.display = "none");
+      setTimeout(() => {
+        if (loading.style.display !== "none") loading.style.display = "none";
+      }, 12000);
+    }
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
+    }
+  </script>
+</body>
+</html>
+
+{
+  "name": "SPPG - Inventory",
+  "short_name": "SPPG",
+  "description": "SPPG - Inventory & Stock Opname",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}
+
+const CACHE = "sppg-pwa-v3";
+const SHELL = ["./","./index.html","./manifest.json","./config.js","./icon.svg","./icon-192.png","./icon-512.png","./maskable-192.png","./maskable-512.png","./apple-touch-icon.png"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", event => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Never cache the Apps Script application/data itself.
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith(
+    caches.match(req).then(cached => cached || fetch(req).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(cache => cache.put(req, copy));
+      return res;
+    }).catch(() => caches.match("./index.html")))
+  );
+});
+
+// SPPG PWA configuration (shell + Apps Script backend)
+// Ganti URL di bawah dengan URL Web App Google Apps Script Anda yang berakhiran /exec.
+const APP_URL = "https://script.google.com/macros/s/AKfycbzFccKXMwlJS9pCNIO-BfVoSNcp_-0-3UN6l_udcE-JVwwmV276l3TNUy1fNNLL5Byl/exec";
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="110" fill="#0f172a"/>
+<rect x="70" y="95" width="372" height="322" rx="55" fill="#fff"/>
+<text x="256" y="275" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="800" fill="#0f172a">SPPG</text>
+</svg>
